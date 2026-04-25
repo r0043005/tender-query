@@ -31,7 +31,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
           
-      - name: Fetch tenders from mlwmlw API
+      - name: Fetch tenders from openfun API
         run: |
           python3 << 'EOF'
           import requests
@@ -39,11 +39,12 @@ jobs:
           import os
 
           keyword = "清"
-          url = f"https://pcc.mlwmlw.org/api/keyword/{keyword}"
+          # 改用 openfun (ronnywang) 提供的穩定 API
+          url = f"https://pcc-api.openfun.app/api/searchbytitle?query={keyword}"
 
           headers = {
               'Accept': 'application/json',
-              'User-Agent': 'TenderFetchBot/1.0'
+              'User-Agent': 'TenderFetchBot/2.0'
           }
 
           try:
@@ -51,17 +52,44 @@ jobs:
               response = requests.get(url, headers=headers, timeout=30)
 
               if response.status_code == 200:
-                  content_type = response.headers.get('content-type', '')
-                  if 'json' in content_type:
-                      data = response.json()
-                      print(f"成功抓取 {len(data)} 筆資料")
+                  data = response.json()
+                  # openfun 的資料放在 records 陣列中
+                  records = data.get('records', [])
+                  print(f"成功抓取 {len(records)} 筆資料")
 
-                      os.makedirs('data', exist_ok=True)
-                      with open('data/tenders.json', 'w', encoding='utf-8') as f:
-                          json.dump(data, f, ensure_ascii=False, indent=2)
-                      print("已更新 data/tenders.json")
-                  else:
-                      print(f"非 JSON 回應: {content_type}")
+                  # 將資料轉換成前端 index.html 原本預期的 mlwmlw 陣列格式
+                  formatted_data = []
+                  for r in records:
+                      brief = r.get('brief', {})
+                      detail = r.get('detail', {})
+                      
+                      # 提取預算並清洗逗號
+                      budget = detail.get('已公告資料:預算金額') or detail.get('機關資料:預算金額') or 0
+                      try:
+                          budget = int(str(budget).replace(',', ''))
+                      except:
+                          budget = 0
+                          
+                      # 提取多種可能的截止日期欄位
+                      deadline = detail.get('已公告資料:截止投標日期及時間') or detail.get('已公告資料:等標期限') or detail.get('已公告資料:截止收件日期') or ''
+                      
+                      # 重新組裝為舊版 API 格式
+                      formatted_item = {
+                          "job_no": r.get('job_number') or r.get('filename') or '',
+                          "title": brief.get('title', '標案名稱'),
+                          "org": r.get('unit_name') or '機關名稱',
+                          "category": brief.get('category', '勞務類'),
+                          "budget": budget,
+                          "publish": r.get('date', ''),
+                          "deadline": deadline,
+                          "url": r.get('url') or f"https://pcc.g0v.ronny.tw/index/entry/{r.get('date')}/{r.get('filename')}"
+                      }
+                      formatted_data.append(formatted_item)
+
+                  os.makedirs('data', exist_ok=True)
+                  with open('data/tenders.json', 'w', encoding='utf-8') as f:
+                      json.dump(formatted_data, f, ensure_ascii=False, indent=2)
+                  print("已成功轉換格式並更新 data/tenders.json")
               else:
                   print(f"HTTP 錯誤: {response.status_code}")
           except Exception as e:
@@ -69,7 +97,7 @@ jobs:
               exit(1)
           EOF
         id: fetch
-
+        
       - name: Commit and push if data changed
         run: |
           git config user.name "GitHub Actions"
