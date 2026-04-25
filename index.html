@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>政府電子採購網 - 今日標案查詢</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1E3A5F;
+            --secondary: #2E86AB;
+            --accent: #F18F01;
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text-primary: #1A202C;
+            --text-secondary: #64748B;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --border: #E2E8F0;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 32px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-section { display: flex; align-items: center; gap: 16px; }
+
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg { width: 32px; height: 32px; }
+
+        .logo-text h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.5px; }
+        .logo-text p { font-size: 0.875rem; opacity: 0.9; margin-top: 2px; }
+
+        .today-badge {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .today-badge svg { width: 20px; height: 20px; }
+        .today-badge span { font-weight: 600; }
+
+        .stats-bar {
+            background: var(--surface);
+            padding: 24px 0;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 32px;
+        }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+
+        .stat-card {
+            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+            padding: 20px 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-value.accent { color: var(--accent); }
+
+        .search-section {
+            background: var(--surface);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            margin-bottom: 32px;
+        }
+
+        .search-bar { position: relative; margin-bottom: 20px; }
+
+        .search-bar input {
+            width: 100%;
+            padding: 16px 20px 16px 52px;
+            font-size: 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 4px rgba(46, 134, 171, 0.1);
+        }
+
+        .search-bar svg {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+        }
+
+        .search-bar .clear-btn {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            display: none;
+        }
+
+        .search-bar .clear-btn.show { display: block; }
+
+        .filter-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+        .filter-group { display: flex; align-items: center; gap: 8px; }
+        .filter-label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+        .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .filter-chip {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            background: var(--surface);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .filter-chip:hover { border-color: var(--secondary); background: #F0F9FF; }
+        .filter-chip.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+
+        .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .results-count { font-size: 1rem; color: var(--text-secondary); }
+        .results-count strong { color: var(--primary); font-weight: 600; }
+
+        .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
+
+        @media (max-width: 1024px) {
+            .cards-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .cards-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .header-content { flex-direction: column; gap: 16px; text-align: center; }
+            .filter-row { flex-direction: column; align-items: flex-start; }
+        }
+
+        .tender-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tender-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .type-badge {
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .type-badge.labor { background: #DBEAFE; color: #1E40AF; }
+        .type-badge.material { background: #FEF3C7; color: #92400E; }
+        .type-badge.engineering { background: #D1FAE5; color: #065F46; }
+
+        .budget-tag {
+            font-size: 0.75rem;
+            color: var(--success);
+            font-weight: 600;
+            background: #ECFDF5;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .card-body { padding: 20px; }
+
+        .tender-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .tender-meta { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+
+        .meta-item { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--text-secondary); }
+        .meta-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+        .tender-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 16px;
+            background: #F8FAFC;
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+        }
+
+        .tender-stat { text-align: center; }
+        .tender-stat .value { font-size: 1.125rem; font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+        .tender-stat .label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-top: 2px; }
+
+        .card-actions { display: flex; gap: 12px; }
+
+        .btn {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: var(--primary); }
+        .btn-secondary { background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: #F1F5F9; }
+        .btn svg { width: 16px; height: 16px; }
+
+        .empty-state {
+            text-align: center;
+            padding: 64px 32px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+        }
+
+        .empty-state svg { width: 80px; height: 80px; color: var(--border); margin-bottom: 24px; }
+        .empty-state h3 { font-size: 1.25rem; color: var(--text-primary); margin-bottom: 8px; }
+        .empty-state p { color: var(--text-secondary); }
+
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 32px 0; }
+
+        .page-btn {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .page-btn:hover:not(:disabled) { background: #F1F5F9; border-color: var(--secondary); }
+        .page-btn.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .page-btn svg { width: 16px; height: 16px; }
+
+        .footer {
+            background: var(--surface);
+            padding: 24px 0;
+            border-top: 1px solid var(--border);
+            margin-top: 32px;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .footer a { color: var(--secondary); text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--primary);
+            color: white;
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast svg { width: 20px; height: 20px; }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #FEF3C7 0%, #FEF3C7 100%);
+            background-repeat: no-repeat;
+            background-size: 100% 40%;
+            background-position: 0 90%;
+        }
+
+        .api-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            background: #F8FAFC;
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+        }
+
+        .api-status.success { background: #ECFDF5; color: #065F46; }
+        .api-status.warning { background: #FEF3C7; color: #92400E; }
+        .api-status.error { background: #FEE2E2; color: #991B1B; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container header-content">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>政府電子採購網 - 「清」字標案查詢</h1>
+                    <p>含「清」字之勞務採購・等標期內</p>
+                </div>
+            </div>
+            <div class="today-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span id="today-date">2026年4月25日</span>
+            </div>
+        </div>
+    </header>
+
+    <section class="stats-bar">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        含「清」字標案總數
+                    </div>
+                    <div class="stat-value" id="stat-total">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        等標期內
+                    </div>
+                    <div class="stat-value accent" id="stat-active">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
+                        勞務採購
+                    </div>
+                    <div class="stat-value" id="stat-labor">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                        </svg>
+                        總預算金額
+                    </div>
+                    <div class="stat-value" id="stat-budget">--</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container">
+        <div class="search-section">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="search-input" placeholder="搜尋標案名稱、機關名稱或案號..." autocomplete="off">
+                <button class="clear-btn" id="clear-search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="display: inline; vertical-align: middle;">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                目前顯示：含「清」字之勞務採購（僅限等標期內案件）
+            </p>
+        </div>
+
+        <div class="results-header">
+            <div class="results-count">
+                共 <strong id="result-count">0</strong> 筆含「清」字之勞務採購標案
+            </div>
+            <div class="filter-chips" data-filter="sort">
+                <button class="filter-chip active" data-value="date">依公告日期</button>
+                <button class="filter-chip" data-value="budget">依預算金額</button>
+                <button class="filter-chip" data-value="deadline">依截止日期</button>
+            </div>
+        </div>
+
+        <div class="api-status" id="api-status">
+            資料來源：政府電子採購網
+        </div>
+
+        <div class="cards-grid" id="cards-container"></div>
+
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <h3>未找到符合條件的標案</h3>
+            <p>請嘗試調整搜尋條件或關鍵字</p>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>資料來源：<a href="https://web.pcc.gov.tw/" target="_blank" rel="noopener">政府電子採購網</a> | 每日更新</p>
+            <p>本頁面僅供參考，實際資訊以政府公告為準</p>
+        </div>
+    </footer>
+
+    <div class="toast" id="toast">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span id="toast-message">已複製到剪貼簿</span>
+    </div>
+
+    <script>
+        // 政府電子採購網標案查詢系統
+        // 多 API 來源策略：pcc.g0v.ronny.tw -> mlwmlw/pcc -> 模擬資料
+
+        const API_SOURCES = [
+            { name: 'pcc.g0v.ronny.tw', base: 'https://pcc.g0v.ronny.tw/api' },
+            { name: 'pcc.mlwmlw.org', base: 'https://pcc.mlwmlw.org/api' }
+        ];
+
+        // 狀態管理
+        let tenders = [];
+        let isLoading = true;
+        let currentFilters = { search: '', sort: 'date' };
+        let currentPage = 1;
+        const itemsPerPage = 12;
+        let currentApiSource = null;
+
+        // DOM Elements
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search');
+        const cardsContainer = document.getElementById('cards-container');
+        const emptyState = document.getElementById('empty-state');
+        const pagination = document.getElementById('pagination');
+        const resultCount = document.getElementById('result-count');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        const apiStatus = document.getElementById('api-status');
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            setTodayDate();
+            setupEventListeners();
+            await loadTenders();
+        });
+
+        // 載入標案資料（多來源策略）
+        async function loadTenders() {
+            isLoading = true;
+            showLoading();
+
+            for (const source of API_SOURCES) {
+                try {
+                    console.log(`嘗試 API 來源: ${source.name}`);
+                    let data;
+
+                    if (source.name === 'pcc.g0v.ronny.tw') {
+                        const response = await fetch(`${source.base}/searchbytitle?query=清&page=1`, {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' }
+                        });
+
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                        const contentType = response.headers.get('content-type');
+                        if (!contentType || !contentType.includes('application/json')) {
+                            throw new Error('Not JSON response');
+                        }
+
+                        data = await response.json();
+                        tenders = processApiData(data.records || []);
+                    }
+                    else if (source.name === 'pcc.mlwmlw.org') {
+                        const response = await fetch(`${source.base}/keyword/清`, {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' }
+                        });
+
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                        data = await response.json();
+                        tenders = processMlwsData(data);
+                    }
+
+                    if (tenders.length > 0) {
+                        currentApiSource = source.name;
+                        updateApiStatus('success', `已連接 ${source.name}，載入 ${tenders.length} 筆資料`);
+                        console.log(`成功使用 API: ${source.name}，載入 ${tenders.length} 筆資料`);
+                        updateStats();
+                        isLoading = false;
+                        renderTenders();
+                        return;
+                    }
+
+                } catch (error) {
+                    console.warn(`API ${source.name} 失敗:`, error.message);
+                }
+            }
+
+            // 所有 API 都失敗，使用模擬資料
+            console.warn('所有 API 來源都失敗，使用模擬資料');
+            updateApiStatus('warning', 'API 連線失敗，使用離線資料（顯示17筆模擬資料）');
+            tenders = getMockTenders();
+            currentApiSource = 'mock';
+            updateStats();
+            isLoading = false;
+            renderTenders();
+        }
+
+        function updateApiStatus(type, message) {
+            apiStatus.className = `api-status ${type}`;
+            apiStatus.textContent = `📡 ${message}`;
+        }
+
+        // 處理 mlwmlw API 回應資料
+        function processMlwsData(data) {
+            if (!data || !Array.isArray(data)) return [];
+
+            return data.map(record => {
+                let budget = 0;
+                if (record.budget) {
+                    budget = parseBudget(record.budget.toString());
+                }
+
+                let deadline = record.deadline || record.end_date || '';
+                let daysLeft = 0;
+                if (deadline) {
+                    const deadlineDate = parseDate(deadline);
+                    if (deadlineDate) {
+                        daysLeft = Math.max(0, Math.ceil((deadlineDate - new Date()) / (1000 * 60 * 60 * 24)));
+                    }
+                }
+
+                let type = 'labor';
+                if (record.category) {
+                    if (record.category.includes('工程')) type = 'engineering';
+                    else if (record.category.includes('財物') || record.category.includes('物品')) type = 'material';
+                    else type = 'labor';
+                }
+
+                return {
+                    id: record.job_no || record.id || '不明',
+                    name: record.title || record.name || '標案名稱',
+                    organization: record.org || record.unit || record.agency || '機關名稱',
+                    type: type,
+                    budget: budget,
+                    publishDate: formatDateFromString(record.publish || record.date || ''),
+                    deadline: deadline,
+                    daysLeft: daysLeft,
+                    bidders: record.bidders || record.count || 0,
+                    pk: record.pk || '',
+                    url: record.url || `https://pcc.g0v.ronny.tw/index/entry/${record.date || ''}/${record.job_no || ''}`
+                };
+            });
+        }
+
+        // 處理 API 回應資料
+        function processApiData(records) {
+            return records.map((record, index) => {
+                let budget = 0;
+                if (record.detail && record.detail['已公告資料:預算金額']) {
+                    budget = parseBudget(record.detail['已公告資料:預算金額']);
+                } else if (record.detail && record.detail['機關資料:預算金額']) {
+                    budget = parseBudget(record.detail['機關資料:預算金額']);
+                }
+
+                let deadline = '';
+                if (record.detail) {
+                    for (const key of ['已公告資料:截止投標日期及時間', '已公告資料:等標期限', '已公告資料:截止收件日期']) {
+                        if (record.detail[key]) {
+                            deadline = record.detail[key];
+                            break;
+                        }
+                    }
+                }
+
+                let type = 'labor';
+                if (record.brief && record.brief.category) {
+                    if (record.brief.category.includes('工程')) type = 'engineering';
+                    else if (record.brief.category.includes('財物')) type = 'material';
+                    else type = 'labor';
+                }
+
+                let daysLeft = 0;
+                if (deadline) {
+                    const deadlineDate = parseDate(deadline);
+                    if (deadlineDate) {
+                        daysLeft = Math.max(0, Math.ceil((deadlineDate - new Date()) / (1000 * 60 * 60 * 24)));
+                    }
+                }
+
+                const pk = btoa(`${record.unit_id || ''}|${record.job_number || ''}`);
+
+                return {
+                    id: record.job_number || record.filename || `不明`,
+                    name: record.brief && record.brief.title ? record.brief.title : '標案名稱',
+                    organization: record.unit_name || record['機關資料:機關名稱'] || '機關名稱',
+                    type: type,
+                    budget: budget,
+                    publishDate: formatDateFromString(record.date),
+                    deadline: deadline,
+                    daysLeft: daysLeft,
+                    bidders: record.companies ? record.companies.ids ? record.companies.ids.length : 0 : 0,
+                    pk: pk,
+                    url: record.url || `https://pcc.g0v.ronny.tw/index/entry/${record.date}/${record.filename}`
+                };
+            });
+        }
+
+        function parseBudget(str) {
+            if (!str) return 0;
+            const match = str.replace(/,/g, '').match(/\d+/);
+            return match ? parseInt(match[0]) : 0;
+        }
+
+        function parseDate(str) {
+            if (!str) return null;
+            const ymdMatch = str.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+            if (ymdMatch) {
+                return new Date(ymdMatch[1], ymdMatch[2] - 1, ymdMatch[3]);
+            }
+            const rocMatch = str.match(/(\d{3})\/(\d{1,2})\/(\d{1,2})/);
+            if (rocMatch) {
+                return new Date(parseInt(rocMatch[1]) + 1911, rocMatch[2] - 1, rocMatch[3]);
+            }
+            return null;
+        }
+
+        function formatDateFromString(dateStr) {
+            if (!dateStr || dateStr.length !== 8) return new Date().toISOString().split('T')[0];
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            return `${year}-${month}-${day}`;
+        }
+
+        // 模擬資料（當 API 無法使用時）
+        function getMockTenders() {
+            return [
+                { id: "1150422", name: "屏東縣來義鄉公所清潔維護工作", organization: "屏東縣來義鄉公所", type: "labor", budget: 850000, publishDate: "2026-04-25", deadline: "2026/04/28", daysLeft: 3, bidders: 2 },
+                { id: "2711500002", name: "高屏發電廠環境清潔維護工作", organization: "台灣電力股份有限公司高屏發電廠", type: "labor", budget: 3200000, publishDate: "2026-04-25", deadline: "2026/05/02", daysLeft: 7, bidders: 4 },
+                { id: "LGC1140065", name: "114年度環境清潔維護勞務採購", organization: "花蓮縣環境保護局", type: "labor", budget: 4500000, publishDate: "2026-04-25", deadline: "2026/05/05", daysLeft: 10, bidders: 3 },
+                { id: "NTC1130916", name: "113年度園區環境清潔綠化維護", organization: "新竹科學園區管理局", type: "labor", budget: 6800000, publishDate: "2026-04-25", deadline: "2026/05/08", daysLeft: 13, bidders: 5 },
+                { id: "TNH1130811", name: "113年台南市公園環境清潔維護", organization: "台南市政府水利局", type: "labor", budget: 2900000, publishDate: "2026-04-25", deadline: "2026/04/30", daysLeft: 5, bidders: 3 },
+                { id: "TPE1130720", name: "台北市停車場清潔維護工作", organization: "台北市停車管理工程處", type: "labor", budget: 1800000, publishDate: "2026-04-25", deadline: "2026/04/29", daysLeft: 4, bidders: 2 },
+                { id: "KHH1130655", name: "高雄市公有市場環境清潔消毒", organization: "高雄市政府經濟發展局", type: "labor", budget: 1200000, publishDate: "2026-04-25", deadline: "2026/04/27", daysLeft: 2, bidders: 2 },
+                { id: "TXG1130588", name: "台中市環保局清潔隊環境整理", organization: "台中市政府環境保護局", type: "labor", budget: 5500000, publishDate: "2026-04-25", deadline: "2026/05/10", daysLeft: 15, bidders: 6 },
+                { id: "CYG1130522", name: "嘉義縣水環境清潔維護工作", organization: "嘉義縣水利處", type: "labor", budget: 980000, publishDate: "2026-04-25", deadline: "2026/04/28", daysLeft: 3, bidders: 2 },
+                { id: "HSZ1130455", name: "新竹市公有設施環境清潔維護", organization: "新竹市政府", type: "labor", budget: 2100000, publishDate: "2026-04-25", deadline: "2026/05/01", daysLeft: 6, bidders: 3 },
+                { id: "TYC1130388", name: "桃園市圖書館清潔維護工作", organization: "桃園市立圖書館", type: "labor", budget: 1500000, publishDate: "2026-04-25", deadline: "2026/04/29", daysLeft: 4, bidders: 2 },
+                { id: "ILA1130322", name: "宜蘭縣政府環境清潔消毒工作", organization: "宜蘭縣政府", type: "labor", budget: 3500000, publishDate: "2026-04-25", deadline: "2026/05/03", daysLeft: 8, bidders: 4 },
+                { id: "MIA1130255", name: "苗栗縣衛生局環境清潔維護", organization: "苗栗縣衛生局", type: "labor", budget: 1800000, publishDate: "2026-04-25", deadline: "2026/04/30", daysLeft: 5, bidders: 3 },
+                { id: "CHA1130188", name: "彰化縣水環境清潔維護工作", organization: "彰化縣水資處", type: "labor", budget: 2400000, publishDate: "2026-04-25", deadline: "2026/05/05", daysLeft: 10, bidders: 3 },
+                { id: "NAN1130122", name: "南投縣風景區環境清潔維護", organization: "南投縣觀光處", type: "labor", budget: 4200000, publishDate: "2026-04-25", deadline: "2026/05/12", daysLeft: 17, bidders: 5 },
+                { id: "YUN1130055", name: "雲林縣校園環境清潔維護工作", organization: "雲林縣教育處", type: "labor", budget: 1900000, publishDate: "2026-04-25", deadline: "2026/04/28", daysLeft: 3, bidders: 2 },
+                { id: "PENG1130008", name: "澎湖縣環境清潔暨綠美化工作", organization: "澎湖縣政府", type: "labor", budget: 3100000, publishDate: "2026-04-25", deadline: "2026/05/01", daysLeft: 6, bidders: 4 }
+            ];
+        }
+
+        function showLoading() {
+            cardsContainer.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                    <div style="color: var(--text-secondary);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="40" height="40" style="animation: spin 1s linear infinite;">
+                            <circle cx="12" cy="12" r="10" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+                        </svg>
+                        <p style="margin-top: 16px;">正在從政府電子採購網載入資料...</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total').textContent = tenders.length;
+            document.getElementById('stat-active').textContent = tenders.filter(t => t.daysLeft > 0).length;
+            document.getElementById('stat-labor').textContent = tenders.filter(t => t.type === 'labor').length;
+
+            const totalBudget = tenders.reduce((sum, t) => sum + (t.budget || 0), 0);
+            const budgetDisplay = totalBudget >= 100000000
+                ? (totalBudget / 100000000).toFixed(1) + '億'
+                : (totalBudget / 10000).toFixed(0) + '萬';
+            document.getElementById('stat-budget').textContent = budgetDisplay;
+        }
+
+        function setTodayDate() {
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('today-date').textContent = today.toLocaleDateString('zh-TW', options);
+        }
+
+        function setupEventListeners() {
+            let debounceTimer;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    currentFilters.search = e.target.value.trim();
+                    currentPage = 1;
+                    renderTenders();
+                }, 300);
+                clearSearchBtn.classList.toggle('show', e.target.value.length > 0);
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                currentFilters.search = '';
+                clearSearchBtn.classList.remove('show');
+                currentPage = 1;
+                renderTenders();
+            });
+
+            document.querySelectorAll('.filter-chips').forEach(group => {
+                const filterType = group.dataset.filter;
+                group.addEventListener('click', (e) => {
+                    const chip = e.target.closest('.filter-chip');
+                    if (!chip) return;
+
+                    group.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+
+                    currentFilters[filterType] = chip.dataset.value;
+                    currentPage = 1;
+                    renderTenders();
+                });
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        }
+
+        function filterTenders() {
+            return tenders.filter(tender => {
+                if (currentFilters.search) {
+                    const search = currentFilters.search.toLowerCase();
+                    const match = tender.name.toLowerCase().includes(search) ||
+                                  tender.organization.toLowerCase().includes(search) ||
+                                  tender.id.toLowerCase().includes(search);
+                    if (!match) return false;
+                }
+                return true;
+            });
+        }
+
+        function sortTenders(filtered) {
+            const sorted = [...filtered];
+            switch (currentFilters.sort) {
+                case 'date':
+                    sorted.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate));
+                    break;
+                case 'budget':
+                    sorted.sort((a, b) => b.budget - a.budget);
+                    break;
+                case 'deadline':
+                    sorted.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+                    break;
+            }
+            return sorted;
+        }
+
+        function renderTenders() {
+            const filtered = filterTenders();
+            const sorted = sortTenders(filtered);
+            const total = sorted.length;
+            const totalPages = Math.ceil(total / itemsPerPage);
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageTenders = sorted.slice(start, end);
+
+            resultCount.textContent = total;
+            cardsContainer.innerHTML = '';
+
+            if (total === 0) {
+                cardsContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                pagination.innerHTML = '';
+                return;
+            }
+
+            cardsContainer.style.display = 'grid';
+            emptyState.style.display = 'none';
+
+            pageTenders.forEach(tender => {
+                const card = createTenderCard(tender);
+                cardsContainer.appendChild(card);
+            });
+
+            renderPagination(totalPages);
+        }
+
+        function createTenderCard(tender) {
+            const div = document.createElement('div');
+            div.className = 'tender-card';
+
+            const typeLabel = { labor: '勞務', material: '財物', engineering: '工程' };
+            const typeClass = { labor: 'labor', material: 'material', engineering: 'engineering' };
+
+            div.innerHTML = `
+                <div class="card-header">
+                    <span class="type-badge ${typeClass[tender.type]}">${typeLabel[tender.type]}</span>
+                    <span class="budget-tag">NT$ ${formatNumber(tender.budget)}</span>
+                </div>
+                <div class="card-body">
+                    <h3 class="tender-name">${highlightText(tender.name, currentFilters.search)}</h3>
+                    <div class="tender-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1"/>
+                                <path d="M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16"/>
+                            </svg>
+                            <span>${highlightText(tender.organization, currentFilters.search)}</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            <span>公告 ${formatDate(tender.publishDate)}</span>
+                        </div>
+                    </div>
+                    <div class="tender-stats">
+                        <div class="tender-stat">
+                            <div class="value">${formatNumber(tender.budget)}</div>
+                            <div class="label">預算(元)</div>
+                        </div>
+                        <div class="tender-stat">
+                            <div class="value">${formatDate(tender.deadline)}</div>
+                            <div class="label">截止投標</div>
+                        </div>
+                        <div class="tender-stat">
+                            <div class="value">${tender.daysLeft}</div>
+                            <div class="label">天</div>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-secondary" onclick="copyId('${tender.id}')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                            </svg>
+                            複製案號
+                        </button>
+                        <button class="btn btn-primary" onclick="openTenderByInfo('${tender.publishDate.replace(/-/g, '')}', '${tender.id}')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                                <polyline points="15 3 21 3 21 9"/>
+                                <line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                            前往投標
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        function renderPagination(totalPages) {
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = `
+                <button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                </button>
+            `;
+
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage < maxButtons - 1) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="changePage(1)">1</button>`;
+                if (startPage > 2) {
+                    html += `<span style="padding: 0 8px;">...</span>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<span style="padding: 0 8px;">...</span>`;
+                }
+                html += `<button class="page-btn" onclick="changePage(${totalPages})">${totalPages}</button>`;
+            }
+
+            html += `
+                <button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </button>
+            `;
+
+            pagination.innerHTML = html;
+        }
+
+        function changePage(page) {
+            const total = filterTenders().length;
+            const totalPages = Math.ceil(total / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderTenders();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function copyId(id) {
+            navigator.clipboard.writeText(id).then(() => {
+                showToast(`已複製案號：${id}`);
+            });
+        }
+
+        function copyUrl(pk) {
+            const url = `https://web.pcc.gov.tw/pis/prkms/urlSelector/common/tpam?pk=${pk}`;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('已複製標案連結');
+            });
+        }
+
+        function openTenderByInfo(date, filename) {
+            const url = `https://pcc.g0v.ronny.tw/index/entry/${date}/${filename}`;
+            window.open(url, '_blank');
+        }
+
+        function showToast(message) {
+            toastMessage.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '--';
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}/${month}/${day}`;
+        }
+
+        function highlightText(text, search) {
+            if (!search) return text;
+            const regex = new RegExp(`(${search})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+    </script>
+
+
+<script>
+/**
+ * Iframe 元素高亮注入脚本
+ * 需要在目标网站中引入此脚本来支持跨域 iframe 高亮功能
+ *
+ * 使用方法：
+ * 1. 将此脚本添加到目标网站的 HTML 中
+ * 2. 或通过浏览器扩展、用户脚本等方式注入
+ */
+
+(function () {
+  "use strict";
+
+  // 检查是否在 iframe 中
+  if (window.self === window.top) {
+    return; // 不在 iframe 中，不执行
+  }
+
+  // 检查是否已经初始化过
+  if (window.__iframeHighlightInitialized) {
+    return;
+  }
+  window.__iframeHighlightInitialized = true;
+  console.log("Iframe 高亮脚本已加载");
+
+  // 创建高亮覆盖层
+  var overlay = document.createElement("div");
+  overlay.id = "iframe-highlight-overlay";
+  overlay.style.cssText = "\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100vw;\n    height: 100vh;\n    pointer-events: none;\n    z-index: 999999;\n    overflow: hidden;\n  ";
+
+  // 创建悬停高亮框（虚线边框）
+  var highlightBox = document.createElement("div");
+  highlightBox.id = "iframe-highlight-box";
+  highlightBox.style.cssText = "\n    position: absolute;\n    border: 2px dashed #007AFF;\n    background: rgba(0, 122, 255, 0.08);\n    pointer-events: none;\n    display: none;\n    transition: all 0.1s ease;\n    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);\n    border-radius: 2px;\n  ";
+
+  // 创建选中节点的常驻高亮框（实线边框）
+  var selectedBox = document.createElement("div");
+  selectedBox.id = "iframe-selected-box";
+  selectedBox.style.cssText = "\n    position: absolute;\n    border: 2px solid #007AFF;\n    pointer-events: none;\n    display: none;\n    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 107, 53, 0.4);\n    border-radius: 2px;\n    z-index: 1000000;\n  ";
+
+  // 创建悬停标签显示
+  var tagLabel = document.createElement("div");
+  tagLabel.id = "iframe-tag-label";
+  tagLabel.style.cssText = "\n    position: absolute;\n    background: #007AFF;\n    color: white;\n    padding: 2px 6px;\n    font-size: 11px;\n    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n    border-radius: 2px;\n    pointer-events: none;\n    display: none;\n    white-space: nowrap;\n    z-index: 1000001;\n    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);\n    font-weight: 500;\n  ";
+
+  // 创建选中节点标签
+  var selectedLabel = document.createElement("div");
+  selectedLabel.id = "iframe-selected-label";
+  selectedLabel.style.cssText = "\n    position: absolute;\n    background: #007AFF;\n    color: white;\n    padding: 3px 8px;\n    font-size: 11px;\n    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n    border-radius: 3px;\n    pointer-events: none;\n    display: none;\n    white-space: nowrap;\n    z-index: 1000002;\n    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);\n    font-weight: 600;\n  ";
+  overlay.appendChild(highlightBox);
+  overlay.appendChild(selectedBox);
+  overlay.appendChild(tagLabel);
+  overlay.appendChild(selectedLabel);
+  document.body.appendChild(overlay);
+
+  // 存储当前选中的元素
+  var selectedElement = null;
+  var highlightEnabled = false;
+
+  // 更新选中元素的高亮显示
+  function updateSelectedHighlight(element) {
+    console.log("updateSelectedHighlight called with:", element);
+    if (!element) {
+      selectedBox.style.display = "none";
+      selectedLabel.style.display = "none";
+      selectedElement = null;
+      console.log("Cleared selected highlight");
+      return;
+    }
+    selectedElement = element;
+    var rect = element.getBoundingClientRect();
+    console.log("Selected element rect:", rect);
+
+    // 更新选中高亮框位置
+    selectedBox.style.display = "block";
+    selectedBox.style.left = "".concat(rect.left - 2, "px");
+    selectedBox.style.top = "".concat(rect.top - 2, "px");
+    selectedBox.style.width = "".concat(rect.width + 4, "px");
+    selectedBox.style.height = "".concat(rect.height + 4, "px");
+
+    // 更新选中标签位置和内容
+    selectedLabel.style.display = "block";
+    selectedLabel.textContent = "\u2713 <".concat(element.tagName.toLowerCase(), ">");
+
+    // 计算标签位置，确保不超出视窗
+    var labelTop = rect.top - 28;
+    var labelLeft = rect.left;
+
+    // 如果标签会超出顶部，显示在元素下方
+    if (labelTop < 5) {
+      labelTop = rect.bottom + 5;
+    }
+
+    // 如果标签会超出右侧，向左调整
+    var labelWidth = selectedLabel.offsetWidth || 100; // 预估宽度
+    if (labelLeft + labelWidth > window.innerWidth - 10) {
+      labelLeft = window.innerWidth - labelWidth - 10;
+    }
+    selectedLabel.style.left = "".concat(Math.max(5, labelLeft), "px");
+    selectedLabel.style.top = "".concat(labelTop, "px");
+    console.log("Selected highlight positioned at:", {
+      left: selectedBox.style.left,
+      top: selectedBox.style.top,
+      width: selectedBox.style.width,
+      height: selectedBox.style.height
+    });
+  }
+  function getElementSelector(element) {
+    if (!(element instanceof Element)) throw new Error('Argument must be a DOM element');
+    var segments = [];
+    var current = element;
+    while (current !== document.documentElement) {
+      var selector = '';
+      // 优先检查唯一ID
+      if (current.id && document.querySelectorAll("#".concat(current.id)).length === 1) {
+        segments.unshift("#".concat(current.id));
+        break; // ID唯一，无需继续向上
+      }
+
+      // 生成类名选择器（取第一个有效类名）
+      var classes = Array.from(current.classList).filter(function (c) {
+        return !c.startsWith('js-');
+      });
+      var className = classes.length > 0 ? ".".concat(classes[0]) : '';
+
+      // 生成位置索引（nth-child）
+      var tag = current.tagName.toLowerCase();
+      if (!className) {
+        var siblings = Array.from(current.parentNode.children);
+        var index = siblings.findIndex(function (el) {
+          return el === current;
+        }) + 1;
+        selector = "".concat(tag, ":nth-child(").concat(index, ")");
+      } else {
+        selector = className;
+      }
+      segments.unshift(selector);
+      current = current.parentElement;
+    }
+
+    // 处理根元素
+    if (current === document.documentElement) {
+      segments.unshift('html');
+    }
+    return segments.join(' > ');
+  }
+
+  // 获取元素文本内容
+  function getElementText(element) {
+    var _element$textContent;
+    if (element.tagName === "INPUT") {
+      return element.value || element.placeholder || "";
+    }
+    if (element.tagName === "TEXTAREA") {
+      return element.value || element.placeholder || "";
+    }
+    var text = ((_element$textContent = element.textContent) === null || _element$textContent === void 0 ? void 0 : _element$textContent.trim()) || "";
+    return text.length > 50 ? text.substring(0, 50) + "..." : text;
+  }
+
+  // 获取元素属性信息
+  function getElementAttributes(element) {
+    var attrs = {};
+    for (var i = 0; i < element.attributes.length; i++) {
+      var attr = element.attributes[i];
+      attrs[attr.name] = attr.value;
+    }
+    return attrs;
+  }
+
+  // 鼠标悬停事件处理
+  function handleMouseOver(e) {
+    if (!highlightEnabled) return;
+    var target = e.target;
+    if (!target || target === overlay || target === highlightBox || target === tagLabel || target === selectedBox || target === selectedLabel) {
+      return;
+    }
+
+    // 避免高亮 html 和 body 元素
+    if (target === document.documentElement || target === document.body) {
+      return;
+    }
+
+    // 如果是已选中的元素，不显示悬停高亮
+    if (target === selectedElement) {
+      highlightBox.style.display = "none";
+      tagLabel.style.display = "none";
+      return;
+    }
+    var rect = target.getBoundingClientRect();
+    var selector = getElementSelector(target);
+    var text = getElementText(target);
+    var attributes = getElementAttributes(target);
+
+    // 更新悬停高亮框位置
+    highlightBox.style.display = "block";
+    highlightBox.style.left = "".concat(rect.left - 2, "px");
+    highlightBox.style.top = "".concat(rect.top - 2, "px");
+    highlightBox.style.width = "".concat(rect.width + 4, "px");
+    highlightBox.style.height = "".concat(rect.height + 4, "px");
+
+    // 更新标签位置和内容
+    tagLabel.style.display = "block";
+    tagLabel.textContent = "<".concat(target.tagName.toLowerCase(), ">");
+
+    // 计算标签位置，确保不超出视窗
+    var labelTop = rect.top - 22;
+    var labelLeft = rect.left;
+
+    // 如果标签会超出顶部，显示在元素下方
+    if (labelTop < 0) {
+      labelTop = rect.bottom + 5;
+    }
+
+    // 如果标签会超出右侧，向左调整
+    if (labelLeft + tagLabel.offsetWidth > window.innerWidth) {
+      labelLeft = window.innerWidth - tagLabel.offsetWidth - 5;
+    }
+    tagLabel.style.left = "".concat(Math.max(0, labelLeft), "px");
+    tagLabel.style.top = "".concat(labelTop, "px");
+
+    // 发送消息到父窗口
+    var elementInfo = {
+      tagName: target.tagName.toLowerCase(),
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        x: rect.x,
+        y: rect.y
+      },
+      selector: selector,
+      text: text,
+      attributes: attributes,
+      url: window.location.href,
+      path: window.location.pathname,
+      timestamp: Date.now()
+    };
+    try {
+      window.parent.postMessage({
+        type: "iframe-element-hover",
+        data: elementInfo,
+        source: "iframe-highlight-injector"
+      }, "*");
+    } catch (error) {
+      console.warn("无法发送消息到父窗口:", error);
+    }
+  }
+
+  // 鼠标离开事件处理
+  function handleMouseOut(e) {
+    if (!highlightEnabled) return;
+    var relatedTarget = e.relatedTarget;
+
+    // 如果鼠标移动到高亮相关元素上，不隐藏高亮
+    if (relatedTarget && (relatedTarget === highlightBox || relatedTarget === tagLabel || relatedTarget === overlay || relatedTarget === selectedBox || relatedTarget === selectedLabel)) {
+      return;
+    }
+    highlightBox.style.display = "none";
+    tagLabel.style.display = "none";
+    try {
+      window.parent.postMessage({
+        type: "iframe-element-hover",
+        data: null,
+        source: "iframe-highlight-injector"
+      }, "*");
+    } catch (error) {
+      console.warn("无法发送消息到父窗口:", error);
+    }
+  }
+
+  // 点击事件处理
+  function handleClick(e) {
+    var target = e.target;
+    if (!target || target === overlay || target === highlightBox || target === tagLabel || target === selectedBox || target === selectedLabel) {
+      return;
+    }
+
+    // 避免处理 html 和 body 元素
+    if (target === document.documentElement || target === document.body) {
+      return;
+    }
+
+    // 检查是否是交互元素，这些元素需要保留默认行为
+    var isInteractiveElement = ['input', 'textarea', 'select', 'button', 'a'].includes(target.tagName.toLowerCase());
+
+    // 如果高亮功能启用，对于非交互元素阻止默认行为和事件传播
+    if (highlightEnabled) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    var rect = target.getBoundingClientRect();
+    var selector = getElementSelector(target);
+    var text = getElementText(target);
+    var attributes = getElementAttributes(target);
+    console.log("Element clicked:", {
+      tagName: target.tagName,
+      selector: selector,
+      rect: rect
+    });
+
+    // 立即更新选中高亮
+    updateSelectedHighlight(target);
+
+    // 隐藏悬停高亮，因为现在是选中状态
+    highlightBox.style.display = "none";
+    tagLabel.style.display = "none";
+    var elementInfo = {
+      tagName: target.tagName.toLowerCase(),
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        x: rect.x,
+        y: rect.y
+      },
+      selector: selector,
+      text: text,
+      attributes: attributes,
+      url: window.location.href,
+      path: window.location.pathname,
+      timestamp: Date.now()
+    };
+    try {
+      window.parent.postMessage({
+        type: "iframe-element-click",
+        data: elementInfo,
+        source: "iframe-highlight-injector"
+      }, "*");
+    } catch (error) {
+      console.warn("无法发送消息到父窗口:", error);
+    }
+  }
+
+  // 监听来自父窗口的消息
+  function handleParentMessage(event) {
+    console.log("Received message from parent:", event.data);
+    if (event.data.type === "iframe-highlight-toggle") {
+      var enabled = event.data.enabled;
+      console.log("Highlight toggle:", enabled);
+      if (enabled) {
+        enableHighlight();
+      } else {
+        disableHighlight();
+      }
+    } else if (event.data.type === "enable-iframe-highlight") {
+      console.log("Enable iframe highlight");
+      enableHighlight();
+    } else if (event.data.type === "disable-iframe-highlight") {
+      console.log("Disable iframe highlight");
+      disableHighlight();
+    } else if (event.data.type === "toggle-iframe-highlight") {
+      var _enabled = event.data.enabled !== undefined ? event.data.enabled : !highlightEnabled;
+      console.log("Toggle iframe highlight to:", _enabled);
+      if (_enabled) {
+        enableHighlight();
+      } else {
+        disableHighlight();
+      }
+    } else if (event.data.type === "update-selected-element") {
+      var selector = event.data.selector;
+      console.log("Update selected element with selector:", selector);
+      if (selector) {
+        try {
+          var element = document.querySelector(selector);
+          console.log("Found element by selector:", element);
+          updateSelectedHighlight(element);
+        } catch (error) {
+          console.warn("Failed to select element:", error);
+          updateSelectedHighlight(null);
+        }
+      } else {
+        updateSelectedHighlight(null);
+      }
+    } else if (event.data.type === "clear-selected-element") {
+      console.log("Clear selected element");
+      updateSelectedHighlight(null);
+    }
+  }
+
+  // 启用高亮功能
+  function enableHighlight() {
+    console.log("Enabling highlight");
+    document.addEventListener("mouseover", handleMouseOver, true);
+    document.addEventListener("mouseout", handleMouseOut, true);
+    document.addEventListener("click", handleClick, true);
+    highlightEnabled = true;
+    overlay.style.display = "block";
+  }
+
+  // 禁用高亮功能
+  function disableHighlight() {
+    console.log("Disabling highlight");
+    highlightEnabled = false;
+    // 保持事件监听器，但通过 highlightEnabled 变量控制行为
+    // 这样可以保留选中状态的显示
+    highlightBox.style.display = "none";
+    tagLabel.style.display = "none";
+    // 不隐藏 selectedBox 和 selectedLabel，保留选中状态
+  }
+
+  // 完全禁用高亮功能（移除所有监听器）
+  function fullyDisableHighlight() {
+    console.log("Fully disabling highlight");
+    highlightEnabled = false;
+    document.removeEventListener("mouseover", handleMouseOver, true);
+    document.removeEventListener("mouseout", handleMouseOut, true);
+    document.removeEventListener("click", handleClick, true);
+    overlay.style.display = "none";
+    highlightBox.style.display = "none";
+    tagLabel.style.display = "none";
+    selectedBox.style.display = "none";
+    selectedLabel.style.display = "none";
+  }
+
+  // 添加事件监听
+  enableHighlight();
+  window.addEventListener("message", handleParentMessage);
+
+  // 暴露全局函数供外部调用
+  window.__iframeHighlightControl = {
+    enable: enableHighlight,
+    disable: disableHighlight,
+    fullyDisable: fullyDisableHighlight,
+    isEnabled: function isEnabled() {
+      return highlightEnabled;
+    },
+    getSelectedElement: function getSelectedElement() {
+      return selectedElement;
+    },
+    updateSelected: updateSelectedHighlight,
+    // 通过消息发送开关控制
+    sendToggleMessage: function sendToggleMessage(enabled) {
+      window.parent.postMessage({
+        type: 'iframe-highlight-status',
+        enabled: enabled || highlightEnabled,
+        source: 'iframe-highlight-injector'
+      }, '*');
+    }
+  };
+
+  // 通知父窗口脚本已加载
+  try {
+    window.parent.postMessage({
+      type: "iframe-highlight-ready",
+      data: {
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: Date.now()
+      },
+      source: "iframe-highlight-injector"
+    }, "*");
+  } catch (error) {
+    console.warn("无法发送就绪消息到父窗口:", error);
+  }
+
+  // 清理函数
+  window.__iframeHighlightCleanup = function () {
+    fullyDisableHighlight();
+    window.removeEventListener("message", handleParentMessage);
+    if (overlay.parentElement) {
+      overlay.parentElement.removeChild(overlay);
+    }
+    delete window.__iframeHighlightInitialized;
+    delete window.__iframeHighlightCleanup;
+  };
+})();
+
+</script>
