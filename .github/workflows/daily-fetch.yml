@@ -96,11 +96,8 @@ jobs:
 
       - name: Copy data to dist
         run: |
-          mkdir -p dist
-          # 複製網頁主檔
+          mkdir -p dist/data
           cp index.html dist/
-          
-          # 將 json 檔案明確複製到 dist/data 目錄下，維持路徑結構
           cp data/tenders.json dist/data/ 2>/dev/null || true
 
       - name: Upload artifact
