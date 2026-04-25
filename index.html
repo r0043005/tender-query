@@ -608,7 +608,7 @@
             // 優先嘗試載入本地資料（由 GitHub Actions 每日更新）
             try {
                 console.log('嘗試載入本地資料...');
-                const localResponse = await fetch('tenders.json', { cache: 'no-cache' });
+                const localResponse = await fetch('data/tenders.json', { cache: 'no-cache' });
 
                 if (localResponse.ok) {
                     const contentType = localResponse.headers.get('content-type');
