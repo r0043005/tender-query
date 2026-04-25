@@ -29,9 +29,13 @@ jobs:
       - name: Copy index.html
         run: |
           mkdir -p dist
+          
+          # 複製網頁主檔
           cp index.html dist/
-          cp data/tenders.json dist/ 2>/dev/null || true
-
+          
+          # 將 json 檔案明確複製到 dist/data 目錄下，維持路徑結構
+          cp data/tenders.json dist/data/ 2>/dev/null || true
+          
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
