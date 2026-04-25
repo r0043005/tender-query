@@ -28,8 +28,9 @@ jobs:
 
       - name: Copy index.html
         run: |
-          mkdir -p dist
-          cp index.html dist/          
+          
+          mkdir -p dist/data
+          cp index.html dist/
           cp data/tenders.json dist/data/ 2>/dev/null || true
           
       - name: Upload artifact
