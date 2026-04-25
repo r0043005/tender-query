@@ -88,6 +88,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Pull latest data   # ← 新增
+        run: git pull
+
       - name: Copy data to dist
         run: |
           mkdir -p dist
