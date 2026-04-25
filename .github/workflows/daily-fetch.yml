@@ -1,0 +1,115 @@
+name: Fetch Daily Tenders
+
+on:
+  # 每天午夜執行一次
+  schedule:
+    - cron: '0 0 * * *'
+  # 也可以手動觸發
+  workflow_dispatch:
+  # 在推送時執行（用於測試）
+  push:
+    branches:
+      - main
+
+jobs:
+  fetch-tenders:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch tenders from mlwmlw API
+        run: |
+          python3 << 'EOF'
+          import requests
+          import json
+          import os
+
+          keyword = "清"  # 可根據需求修改關鍵字
+          url = f"https://pcc.mlwmlw.org/api/keyword/{keyword}"
+
+          headers = {
+              'Accept': 'application/json',
+              'User-Agent': 'TenderFetchBot/1.0'
+          }
+
+          try:
+              print(f"正在抓取: {url}")
+              response = requests.get(url, headers=headers, timeout=30)
+
+              if response.status_code == 200:
+                  content_type = response.headers.get('content-type', '')
+                  if 'json' in content_type:
+                      data = response.json()
+                      print(f"成功抓取 {len(data)} 筆資料")
+
+                      # 寫入 data/tenders.json
+                      os.makedirs('data', exist_ok=True)
+                      with open('data/tenders.json', 'w', encoding='utf-8') as f:
+                          json.dump(data, f, ensure_ascii=False, indent=2)
+                      print("已更新 data/tenders.json")
+                  else:
+                      print(f"非 JSON 回應: {content_type}")
+                      print(f"回應內容: {response.text[:200]}")
+              else:
+                  print(f"HTTP 錯誤: {response.status_code}")
+                  print(f"回應內容: {response.text[:200]}")
+          except Exception as e:
+              print(f"抓取失敗: {e}")
+              exit(1)
+          EOF
+        id: fetch
+
+      - name: Commit and push if data changed
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          if git diff --quiet data/tenders.json; then
+            echo "資料沒有變化，不需要提交"
+          else
+            echo "資料有變化，正在提交..."
+            git add data/tenders.json
+            git commit -m "Update tender data - $(date '+%Y-%m-%d %H:%M:%S')"
+            git push
+          fi
+
+  update-index:
+    runs-on: ubuntu-latest
+    needs: fetch-tenders
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy data to dist
+        run: |
+          mkdir -p dist
+          cp index.html dist/
+          cp data/tenders.json dist/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'dist'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: update-index
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
