@@ -1,0 +1,90 @@
+[
+  {
+    "id": "3GD24002",
+    "name": "113年度環境清理及資源回收工作(開口契約)",
+    "organization": "花蓮縣秀林鄉公所",
+    "type": "labor",
+    "budget": 3500000,
+    "publishDate": "2025/04/01",
+    "deadline": "2025/04/25",
+    "daysLeft": 0,
+    "pk": "eyJpdiI6ImE4Qk1BPT0iLCJ2IjoxfQ=="
+  },
+  {
+    "id": "3GD24003",
+    "name": "清水窩綠廊環境改善工程",
+    "organization": "桃園市政府環境保護局",
+    "type": "engineering",
+    "budget": 8500000,
+    "publishDate": "2025/04/05",
+    "deadline": "2025/04/28",
+    "daysLeft": 3,
+    "pk": "eyJpdiI6ImJCMENBPT0iLCJ2IjoxfQ=="
+  },
+  {
+    "id": "3LD24015",
+    "name": "113年河川及水庫清淤工程工作(開口契約)",
+    "organization": "經濟部水利署第三河川分署",
+    "type": "labor",
+    "budget": 5200000,
+    "publishDate": "2025/04/08",
+    "deadline": "2025/04/30",
+    "daysLeft": 5,
+    "pk": "eyJpdiI6ImNDMERBPT0iLCJ2IjoxfQ=="
+  },
+  {
+    "id": "3GD24008",
+    "name": "市區道路清掃及清溝服務工作",
+    "organization": "高雄市政府環境保護局",
+    "type": "labor",
+    "budget": 2800000,
+    "publishDate": "2025/04/10",
+    "deadline": "2025/05/02",
+    "daysLeft": 7,
+    "pk": "eyJpdiI6ImRDMERBPT0iLCJ2IjoxfQ=="
+  },
+  {
+    "id": "3LD24018",
+    "name": "水庫上游集水區清理維護工作",
+    "organization": "台灣自來水公司第四區管理處",
+    "type": "labor",
+    "budget": 4100000,
+    "publishDate": "2025/04/12",
+    "deadline": "2025/05/05",
+    "daysLeft": 10,
+    "pk": "eyJpdiI6ImVDMERBPT0iLCJ2IjoxfQ=="
+  },
+  {
+    "id": "3GD24011",
+    "name": "校園環境清理及綠美化維護工作",
+    "organization": "新北市政府教育局",
+    "type": "labor",
+    "budget": 1800000,
+    "publishDate": "2025/04/15",
+    "deadline": "2025/05/08",
+    "daysLeft": 13,
+    "pk": "eyJpdiI6ImZDMERBPT0iLCJ2IjoxfQ=="
+  },
+  {
+    "id": "3LD24020",
+    "name": "鳳山溪河川地清理及環境改善工作",
+    "organization": "高雄市政府水利局",
+    "type": "labor",
+    "budget": 3200000,
+    "publishDate": "2025/04/18",
+    "deadline": "2025/05/10",
+    "daysLeft": 15,
+    "pk": "eyJpdiI66ImdDMEVBPT0iLCJ2IjoxfQ=="
+  },
+  {
+    "id": "3GD24014",
+    "name": "風景區清潔維護及環境清理工作",
+    "organization": "交通部觀光局東海岸風景特定區管理處",
+    "type": "labor",
+    "budget": 4500000,
+    "publishDate": "2025/04/20",
+    "deadline": "2025/05/12",
+    "daysLeft": 17,
+    "pk": "eyJpdiI6ImhDMEVBPT0iLCJ2IjoxfQ=="
+  }
+]
