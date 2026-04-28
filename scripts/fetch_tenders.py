@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-政府電子採購網標案資料抓取腳本 (爬蟲修正版)
-依照使用者提供的成功搜尋參數進行抓取
+政府電子採購網標案資料抓取腳本 (Session 強化版)
+使用 Session 處理 Cookie 並強化 HTML 解析
 """
 
 import requests
@@ -13,138 +13,136 @@ from datetime import datetime, timedelta
 import argparse
 
 def fetch_tenders_by_scraping(keyword="清"):
-    """
-    直接從政府電子採購網爬取標案資訊 (使用 readTenderBasic 接口)
-    """
     print(f"開始爬取關鍵字: {keyword}")
     
-    # 使用使用者提供的成功網址接口
-    url = "https://web.pcc.gov.tw/prkms/tender/common/basic/readTenderBasic"
+    # 使用 Session 保持 Cookies
+    session = requests.Session()
     
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": "https://web.pcc.gov.tw/prkms/tender/common/basic/indexTenderBasic"
-    }
-    
-    # 設定西元日期格式
-    today = datetime.now()
-    start_dt = today - timedelta(days=7) # 搜尋最近一週
-    
-    # 依照使用者提供的 URL 參數進行配置
-    params = {
-        "pageSize": "50",
-        "firstSearch": "true",
-        "searchType": "basic",
-        "isBinding": "N",
-        "isLogIn": "N",
-        "level_1": "on",
-        "tenderName": keyword,
-        "tenderType": "TENDER_DECLARATION",
-        "tenderWay": "TENDER_WAY_ALL_DECLARATION",
-        "dateType": "isSpdt", # 等標期內
-        "tenderStartDate": start_dt.strftime("%Y/%m/%d"),
-        "tenderEndDate": today.strftime("%Y/%m/%d"),
-        "radProctrgCate": "RAD_PROCTRG_CATE_3", # 勞務類
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
     }
     
     try:
-        print(f"發送 GET 請求到 {url}...")
-        print(f"參數: {params}")
+        # 第一步：先訪問首頁建立 Session
+        print("存取搜尋首頁建立 Session...")
+        index_url = "https://web.pcc.gov.tw/prkms/tender/common/basic/indexTenderBasic"
+        session.get(index_url, headers=headers, timeout=20)
         
-        # 使用 GET 請求 (對應使用者提供的網址格式)
-        response = requests.get(url, params=params, headers=headers, timeout=30)
+        # 第二步：執行搜尋
+        url = "https://web.pcc.gov.tw/prkms/tender/common/basic/readTenderBasic"
+        
+        today = datetime.now()
+        start_dt = today - timedelta(days=10) # 稍微放寬日期範圍增加命中率
+        
+        params = {
+            "pageSize": "50",
+            "firstSearch": "true",
+            "searchType": "basic",
+            "isBinding": "N",
+            "isLogIn": "N",
+            "level_1": "on",
+            "tenderName": keyword,
+            "tenderType": "TENDER_DECLARATION",
+            "tenderWay": "TENDER_WAY_ALL_DECLARATION",
+            "dateType": "isSpdt",
+            "tenderStartDate": start_dt.strftime("%Y/%m/%d"),
+            "tenderEndDate": today.strftime("%Y/%m/%d"),
+            "radProctrgCate": "RAD_PROCTRG_CATE_3",
+        }
+        
+        print(f"發送搜尋請求到 {url}...")
+        headers["Referer"] = index_url
+        response = session.get(url, params=params, headers=headers, timeout=30)
         
         if response.status_code != 200:
-            print(f"錯誤: 伺服器回傳狀態碼 {response.status_code}")
-            if response.status_code == 403:
-                print("偵測到 Cloudflare 阻擋。")
+            print(f"錯誤: 狀態碼 {response.status_code}")
             return []
             
+        # 偵錯：如果沒抓到資料，存下 HTML
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 尋找結果表格
-        # 在 readTenderBasic 中，表格通常帶有 class="table_list"
+        # 標案列表解析邏輯
+        # 採購網結果表格可能在 class="table_list" 或特定 id 下
         table = soup.select_one("table.table_list")
         if not table:
             table = soup.find("table", {"summary": "結果列表"})
         
         if not table:
-            print("找不到結果表格，檢查是否查無資料。")
+            # 檢查是否有查無資料訊息
             if "查無資料" in response.text:
-                print("網頁顯示：查無資料。")
+                print("結果：查無符合條件的標案。")
+            else:
+                print("警告：找不到表格結構。")
+                # 儲存 HTML 片段供開發者查閱
+                with open("error_page.html", "w", encoding="utf-8") as f:
+                    f.write(response.text[:5000])
+                print("已存檔前 5000 字元至 error_page.html")
             return []
             
-        rows = table.find_all("tr")[1:] # 跳過標題列
-        print(f"找到 {len(rows)} 筆原始資料")
-        
+        rows = table.find_all("tr")
         tenders = []
+        
         for row in rows:
             cols = row.find_all("td")
-            if len(cols) < 5:
+            # 通常標案資料列會有超過 5 個 td
+            if len(cols) < 7:
                 continue
             
             try:
-                # 欄位解析 (依照 readTenderBasic 結構)
-                # 1: 機關名稱, 2: 標案名稱/案號, 5: 公告日期, 6: 截止投標, 7: 預算金額
-                org = cols[1].get_text(strip=True)
+                # 索引位置可能因版本微調，我們進行更寬鬆的解析
+                # 嘗試找出包含 <a> 標籤且內容有關鍵字的列
+                name_cell = None
+                for td in cols:
+                    if td.find("a") and keyword in td.get_text():
+                        name_cell = td
+                        break
                 
-                name_cell = cols[2]
+                if not name_cell:
+                    name_cell = cols[2] # 預設位置
+                
+                org = cols[1].get_text(strip=True)
                 name_text = name_cell.get_text(strip=True)
                 
                 job_no = ""
                 name = name_text
                 if "(" in name_text and ")" in name_text:
-                    parts = name_text.split(")")
-                    job_no = parts[0].replace("(", "").strip()
-                    name = ")".join(parts[1:]).strip()
+                    job_no = name_text.split("(")[1].split(")")[0]
+                    name = name_text.split(")")[1].strip() if ")" in name_text else name_text
                 
-                # 公告日期
-                publish_raw = cols[5].get_text(strip=True) # 可能是民國或西元，統一格式化
-                publish = publish_raw.replace("/", "")
-                
-                # 截止日期
-                deadline = cols[6].get_text(strip=True)
-                
-                # 預算金額
-                budget_raw = cols[7].get_text(strip=True).replace(",", "")
-                try:
-                    budget = int(budget_raw)
-                except:
-                    budget = 0
-                
-                # URL
-                link_tag = name_cell.find("a")
-                tender_url = ""
-                if link_tag and link_tag.get("href"):
-                    href = link_tag.get("href")
-                    if href.startswith("/"):
-                        tender_url = f"https://web.pcc.gov.tw{href}"
-                    else:
-                        tender_url = href
+                # 找到日期欄位（通常是 YYYY/MM/DD 或 民國格式）
+                publish = ""
+                for td in cols:
+                    txt = td.get_text(strip=True)
+                    if "/" in txt and len(txt) >= 8:
+                        publish = txt.replace("/", "")
+                        break
 
                 tenders.append({
                     "job_no": job_no or name_text[:15],
                     "title": name,
                     "org": org,
                     "category": "勞務類",
-                    "budget": budget,
+                    "budget": 0, # 此頁面預算有時在詳細頁，先給 0
                     "publish": publish,
-                    "deadline": deadline,
-                    "url": tender_url
+                    "deadline": "",
+                    "url": "https://web.pcc.gov.tw" + name_cell.find("a")["href"] if name_cell.find("a") else ""
                 })
             except Exception:
                 continue
                 
+        print(f"解析成功，抓取到 {len(tenders)} 筆標案。")
         return tenders
 
     except Exception as e:
-        print(f"爬取過程發生錯誤: {e}")
+        print(f"爬取錯誤: {e}")
         return []
 
 def main():
-    parser = argparse.ArgumentParser(description='政府電子採購網標案抓取 (readTenderBasic 版)')
-    parser.add_argument('--keyword', '-k', default='清', help='搜尋關鍵字')
-    parser.add_argument('--output', '-o', default='data/tenders.json', help='輸出路徑')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--keyword', '-k', default='清')
+    parser.add_argument('--output', '-o', default='data/tenders.json')
     args = parser.parse_args()
     
     tenders = fetch_tenders_by_scraping(args.keyword)
@@ -152,8 +150,7 @@ def main():
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(tenders, f, ensure_ascii=False, indent=2)
-        
-    print(f"完成! 已儲存 {len(tenders)} 筆標案到 {args.output}")
+    print(f"已更新 {args.output}")
 
 if __name__ == "__main__":
     main()
