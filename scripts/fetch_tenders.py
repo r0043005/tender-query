@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import argparse
 
 def to_minguo_date(date_obj):
@@ -31,18 +31,20 @@ def fetch_tenders_by_scraping(keyword="清"):
         "Content-Type": "application/x-www-form-urlencoded"
     }
     
-    # 設定搜尋日期範圍 (今天到過去 30 天)
+    # 設定搜尋日期範圍 (公告日期：今天到過去 30 天)
     today = datetime.now()
-    import datetime as dt
-    start_dt = today - dt.timedelta(days=30)
+    start_dt = today - timedelta(days=30)
     
-    # 更新為 2024/2025 實測正確的參數名稱
+    # 參數設定說明：
+    # tenderStatus: '4' 為「等標期內」
+    # tenderType: '1' 為「招標公告」
+    # radProctrgCate: '3' 為「勞務類」
     payload = {
         "method": "readNoticeAll",
         "isSearch": "true",
         "tenderName": keyword,
-        "tenderStatus": "4,5,21,29", # 招標公告、決標、無法決標、公開閱覽
-        "tenderType": "1", # 1:招標
+        "tenderStatus": "4", # 僅選取「等標期內」
+        "tenderType": "1", # 招標公告
         "radProctrgCate": "3", # 勞務類
         "tenderDateStart": to_minguo_date(start_dt),
         "tenderDateEnd": to_minguo_date(today),
@@ -52,7 +54,8 @@ def fetch_tenders_by_scraping(keyword="清"):
     
     try:
         print(f"發送 POST 請求到 {url}...")
-        print(f"參數: {payload}")
+        print(f"篩選條件: 等標期內, 勞務類, 公告日期 {to_minguo_date(start_dt)} ~ {to_minguo_date(today)}")
+        
         response = requests.post(url, data=payload, headers=headers, timeout=30)
         
         if response.status_code == 403:
@@ -68,23 +71,17 @@ def fetch_tenders_by_scraping(keyword="清"):
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # 尋找結果表格
-        # 根據實測，結果表格可能在 id 為 "print_area" 下方的 table
         table = soup.select_one("table.table_list")
         if not table:
-            # 嘗試搜尋 summary 屬性
             table = soup.find("table", {"summary": "結果列表"})
-        
         if not table:
-            # 如果還是找不到，看看有沒有可能是 id="item"
             table = soup.find("table", {"id": "item"})
 
         if not table:
-            print("找不到結果表格，可能查無資料。")
-            # 偵錯：輸出網頁標題或關鍵字
             if "查無資料" in response.text:
-                print("網頁明確顯示：查無資料。")
+                print("網頁顯示：查無資料 (等標期內目前可能沒有含「清」字的勞務標案)")
             else:
-                print("網頁結構可能已改變，或搜尋失敗。")
+                print("找不到結果表格，網頁結構可能已改變。")
             return []
             
         rows = table.find_all("tr")[1:] # 跳過標題列
@@ -97,15 +94,13 @@ def fetch_tenders_by_scraping(keyword="清"):
                 continue
             
             try:
-                # 0: 序號, 1: 機關名稱, 2: 案號/名稱, 3: 傳輸次數, 4: 招標方式, 5: 公告日期, 6: 截止投標, 7: 預算金額
+                # 欄位解析
                 org = cols[1].get_text(strip=True)
-                
                 name_cell = cols[2]
                 name_text = name_cell.get_text(strip=True)
                 
                 job_no = ""
                 name = name_text
-                # 嘗試從括號提取案號
                 if "(" in name_text and ")" in name_text:
                     parts = name_text.split(")")
                     job_no = parts[0].replace("(", "").strip()
@@ -149,7 +144,7 @@ def fetch_tenders_by_scraping(keyword="清"):
                     "deadline": deadline,
                     "url": tender_url
                 })
-            except Exception as e:
+            except Exception:
                 continue
                 
         return tenders
@@ -159,7 +154,7 @@ def fetch_tenders_by_scraping(keyword="清"):
         return []
 
 def main():
-    parser = argparse.ArgumentParser(description='政府電子採購網標案抓取 (爬蟲版)')
+    parser = argparse.ArgumentParser(description='政府電子採購網標案抓取 (等標期內版)')
     parser.add_argument('--keyword', '-k', default='清', help='搜尋關鍵字')
     parser.add_argument('--output', '-o', default='data/tenders.json', help='輸出路徑')
     args = parser.parse_args()
