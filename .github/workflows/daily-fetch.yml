@@ -2,14 +2,8 @@ name: Fetch and Deploy Tenders
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'data/**'
-      - 'README.md'
+    - cron: '0 0 * * *' # 每天凌晨執行
+  workflow_dispatch: # 允許手動執行
 
 permissions:
   contents: write
@@ -21,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  fetch-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,7 +27,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # 啟用快取增加穩定性
           
       - name: Install dependencies
         run: |
@@ -44,24 +37,22 @@ jobs:
         run: |
           python scripts/fetch_tenders.py --keyword "清" --output "data/tenders.json"
         
-      - name: Commit and push if data changed
+      - name: Commit and push data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/tenders.json
           if git diff --staged --quiet; then
-            echo "資料沒有變化，不需要提交"
+            echo "沒有新數據。"
           else
-            echo "資料有變化，正在提交..."
-            # 使用 [skip ci] 防止重複觸發工作流
-            git commit -m "Update tender data - $(date '+%Y-%m-%d %H:%M:%S') [skip ci]"
+            git commit -m "Update data [skip ci]"
             git push origin main
           fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Prepare distribution
+      - name: Prepare Files
         run: |
           mkdir -p dist/data
           cp index.html dist/
