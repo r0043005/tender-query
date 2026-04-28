@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-政府電子採購網標案資料抓取腳本 (Cloudscraper 強化版)
-使用 cloudscraper 繞過 Cloudflare 防護
+政府電子採購網標案資料抓取腳本 (環境修正版)
 """
+import sys
+import os
 
 try:
     import cloudscraper
     HAS_CLOUDSCRAPER = True
 except ImportError:
+    print(f"DEBUG: Python Executable: {sys.executable}")
+    print(f"DEBUG: Path: {sys.path}")
     import requests
     HAS_CLOUDSCRAPER = False
-    print("警告: 找不到 cloudscraper 模組，將回退使用標準 requests。")
 
 from bs4 import BeautifulSoup
 import json
-import os
 import time
 from datetime import datetime, timedelta
 import argparse
@@ -22,9 +23,7 @@ import argparse
 def fetch_tenders_by_scraping(keyword="清"):
     print(f"開始爬取關鍵字: {keyword}")
     
-    # 建立爬取實例
     if HAS_CLOUDSCRAPER:
-        print("使用 cloudscraper 進行爬取...")
         scraper = cloudscraper.create_scraper(
             browser={
                 'browser': 'chrome',
@@ -33,22 +32,28 @@ def fetch_tenders_by_scraping(keyword="清"):
             }
         )
     else:
-        print("使用標準 requests 進行爬取...")
         scraper = requests.Session()
     
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Referer": "https://web.pcc.gov.tw/prkms/tender/common/basic/indexTenderBasic"
+        "Cache-Control": "max-age=0",
+        "Connection": "keep-alive"
     }
     
     try:
+        # 步驟 1: 存取首頁
+        index_url = "https://web.pcc.gov.tw/prkms/tender/common/basic/indexTenderBasic"
+        print(f"存取首頁以建立 Session: {index_url}")
+        scraper.get(index_url, headers=headers, timeout=20)
+        
+        # 步驟 2: 執行搜尋
         url = "https://web.pcc.gov.tw/prkms/tender/common/basic/readTenderBasic"
         
         today = datetime.now()
-        start_dt = today - timedelta(days=7) # 跟隨使用者成功的參數範例 (約一週)
+        start_dt = today - timedelta(days=7)
         
-        # 完整對齊使用者手動搜尋成功的參數
+        # 完全對齊使用者成功的網址參數
         params = {
             "pageSize": "50",
             "firstSearch": "true",
@@ -56,43 +61,45 @@ def fetch_tenders_by_scraping(keyword="清"):
             "isBinding": "N",
             "isLogIn": "N",
             "level_1": "on",
+            "orgName": "",
+            "orgId": "",
             "tenderName": keyword,
+            "tenderId": "",
             "tenderType": "TENDER_DECLARATION",
             "tenderWay": "TENDER_WAY_ALL_DECLARATION",
-            "dateType": "isSpdt", # 等標期內
+            "dateType": "isSpdt",
             "tenderStartDate": start_dt.strftime("%Y/%m/%d"),
             "tenderEndDate": today.strftime("%Y/%m/%d"),
-            "radProctrgCate": "RAD_PROCTRG_CATE_3", # 勞務類
+            "radProctrgCate": "RAD_PROCTRG_CATE_3",
             "policyAdvocacy": ""
         }
         
-        print(f"發送搜尋請求 (Cloudscraper) 到 {url}...")
+        print(f"發送搜尋請求到 {url}...")
+        headers["Referer"] = index_url
         response = scraper.get(url, params=params, headers=headers, timeout=30)
         
         if response.status_code != 200:
             print(f"錯誤: 狀態碼 {response.status_code}")
-            # 輸出部分內容診斷
-            print(f"DEBUG Content: {response.text[:200]}")
             return []
             
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 尋找結果表格 (readTenderBasic 的結構)
+        # 尋找結果表格 (readTenderBasic 結構)
         table = soup.select_one("table.table_list")
         if not table:
             table = soup.find("table", {"summary": "結果列表"})
         
         if not table:
+            print(f"警告：找不到表格結構。標題：{soup.title.string if soup.title else '無'}")
             if "查無資料" in response.text:
-                print("結果：網頁顯示「查無資料」，請確認該日期區間是否有標案。")
+                print("結果：查無符合條件的標案。")
             else:
-                print("警告：仍然找不到表格結構，可能需要手動確認 HTML 內容。")
-                print(f"Page Title: {soup.title.string if soup.title else 'No Title'}")
-                # 輸出 HTML 前 500 字元以便在 Actions 日誌中查看
-                print(f"HTML Snippet: {response.text[:500]}")
+                # 輸出 HTML 前 500 字元以便 Actions 日誌診斷
+                snippet = response.text.replace("\n", "").replace("\r", "")[:500]
+                print(f"HTML 片段: {snippet}")
             return []
             
-        rows = table.find_all("tr")
+        rows = table.find_all("tr")[1:]
         tenders = []
         
         for row in rows:
@@ -101,12 +108,11 @@ def fetch_tenders_by_scraping(keyword="清"):
                 continue
             
             try:
-                # 欄位：1:機關, 2:名稱(案號), 5:公告日, 6:截止日, 7:預算
+                # 欄位解析：1:機關, 2:名稱(案號), 5:公告日, 6:截止日, 7:預算
                 org = cols[1].get_text(strip=True)
                 name_cell = cols[2]
                 name_text = name_cell.get_text(strip=True)
                 
-                # 案號處理
                 job_no = ""
                 name = name_text
                 if "(" in name_text and ")" in name_text:
@@ -114,10 +120,8 @@ def fetch_tenders_by_scraping(keyword="清"):
                     job_no = parts[0].replace("(", "").strip()
                     name = ")".join(parts[1:]).strip()
                 
-                # 公告日期
                 publish = cols[5].get_text(strip=True).replace("/", "")
                 
-                # 預算
                 budget_raw = cols[7].get_text(strip=True).replace(",", "")
                 budget = int(budget_raw) if budget_raw.isdigit() else 0
 

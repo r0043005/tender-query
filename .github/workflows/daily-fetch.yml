@@ -28,16 +28,12 @@ jobs:
           
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install requests beautifulsoup4 cloudscraper
-          
-      - name: Verify installation
-        run: |
-          python3 -m pip list
+          python -m pip install --upgrade pip
+          python -m pip install requests beautifulsoup4 cloudscraper brotli
           
       - name: Fetch tenders from Government Procurement Website
         run: |
-          python3 scripts/fetch_tenders.py --keyword "清" --output "data/tenders.json"
+          python scripts/fetch_tenders.py --keyword "清" --output "data/tenders.json"
         id: fetch
         
       - name: Commit and push if data changed
