@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'data/**' # 重要：避免更新資料後無限重複觸發工作流
+      - 'data/**'
 
 permissions:
   contents: write
@@ -33,13 +33,13 @@ jobs:
         with:
           python-version: '3.11'
           
-      - name: Install dependencies
+      - name: Fetch Tenders Data
         run: |
           python -m pip install --upgrade pip
           python -m pip install requests beautifulsoup4 cloudscraper brotli
-          
-      - name: Fetch tenders
-        run: |
+          echo "--- Installed Packages ---"
+          python -m pip list
+          echo "--- Starting Scraper ---"
           python scripts/fetch_tenders.py --keyword "清" --output "data/tenders.json"
         
       - name: Commit and push if data changed
@@ -65,7 +65,7 @@ jobs:
           cp data/tenders.json dist/data/
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3 # 保持 v3，這是目前最穩定的版本
+        uses: actions/upload-pages-artifact@v3
         with:
           path: 'dist'
 
