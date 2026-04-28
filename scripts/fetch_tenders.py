@@ -4,7 +4,14 @@
 使用 cloudscraper 繞過 Cloudflare 防護
 """
 
-import cloudscraper
+try:
+    import cloudscraper
+    HAS_CLOUDSCRAPER = True
+except ImportError:
+    import requests
+    HAS_CLOUDSCRAPER = False
+    print("警告: 找不到 cloudscraper 模組，將回退使用標準 requests。")
+
 from bs4 import BeautifulSoup
 import json
 import os
@@ -15,14 +22,19 @@ import argparse
 def fetch_tenders_by_scraping(keyword="清"):
     print(f"開始爬取關鍵字: {keyword}")
     
-    # 建立 cloudscraper 實例 (自動處理 Cloudflare 挑戰)
-    scraper = cloudscraper.create_scraper(
-        browser={
-            'browser': 'chrome',
-            'platform': 'windows',
-            'mobile': False
-        }
-    )
+    # 建立爬取實例
+    if HAS_CLOUDSCRAPER:
+        print("使用 cloudscraper 進行爬取...")
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'mobile': False
+            }
+        )
+    else:
+        print("使用標準 requests 進行爬取...")
+        scraper = requests.Session()
     
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
