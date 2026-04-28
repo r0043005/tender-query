@@ -8,10 +8,14 @@ on:
     branches:
       - main
 
+# 加入併發控制，確保同一時間只有一個 Pages 發布任務
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   fetch-tenders:
     runs-on: ubuntu-latest
-    # ▼ 修正 1：賦予 GitHub Actions 推送程式碼的寫入權限
     permissions:
       contents: write
 
@@ -19,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main # ▼ 修正 2：確保檢出的是 main 分支，以利後續 push
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -58,7 +62,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main # ▼ 修正 3：直接檢出 main 分支，這樣就會自動拿到剛 push 的最新資料，不需要再執行 git pull
+          ref: main
 
       - name: Copy data to dist
         run: |
