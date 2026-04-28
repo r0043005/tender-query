@@ -27,30 +27,32 @@ def fetch_tenders_by_scraping(keyword="清"):
     
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": "https://web.pcc.gov.tw/prkms/tender/common/noticeAll/indexNoticeAll"
+        "Referer": "https://web.pcc.gov.tw/prkms/tender/common/noticeAll/indexNoticeAll",
+        "Content-Type": "application/x-www-form-urlencoded"
     }
     
     # 設定搜尋日期範圍 (今天到過去 30 天)
     today = datetime.now()
-    # startDate = to_minguo_date(today) # 只抓今天的? 不，通常抓最近一段時間的
-    # 根據需求，通常是抓取「等標期內」的標案，所以我們搜尋最近一個月公告的
     import datetime as dt
     start_dt = today - dt.timedelta(days=30)
     
+    # 更新為 2024/2025 實測正確的參數名稱
     payload = {
-        "method": "query",
-        "searchQue": "true",
+        "method": "readNoticeAll",
+        "isSearch": "true",
         "tenderName": keyword,
-        "tenderStatus": "4,5,21,29", # 招標中、等標期內
-        "tenderType": "TENDER_DECLARATION", # 招標公告
+        "tenderStatus": "4,5,21,29", # 招標公告、決標、無法決標、公開閱覽
+        "tenderType": "1", # 1:招標
         "radProctrgCate": "3", # 勞務類
-        "startDate": to_minguo_date(start_dt),
-        "endDate": to_minguo_date(today),
-        "pageSize": "100"
+        "tenderDateStart": to_minguo_date(start_dt),
+        "tenderDateEnd": to_minguo_date(today),
+        "pageSize": "100",
+        "firstPage": "true"
     }
     
     try:
         print(f"發送 POST 請求到 {url}...")
+        print(f"參數: {payload}")
         response = requests.post(url, data=payload, headers=headers, timeout=30)
         
         if response.status_code == 403:
@@ -66,16 +68,23 @@ def fetch_tenders_by_scraping(keyword="清"):
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # 尋找結果表格
-        # 根據 web.pcc.gov.tw 的結構，結果通常在 class 為 table_list 的表格中
+        # 根據實測，結果表格可能在 id 為 "print_area" 下方的 table
         table = soup.select_one("table.table_list")
         if not table:
-            # 嘗試另外一種可能的選擇器
+            # 嘗試搜尋 summary 屬性
             table = soup.find("table", {"summary": "結果列表"})
-            
+        
         if not table:
-            print("找不到結果表格，可能是沒有符合條件的標案或頁面結構已改變")
-            # 打印部分 HTML 供偵錯
-            # print(response.text[:1000])
+            # 如果還是找不到，看看有沒有可能是 id="item"
+            table = soup.find("table", {"id": "item"})
+
+        if not table:
+            print("找不到結果表格，可能查無資料。")
+            # 偵錯：輸出網頁標題或關鍵字
+            if "查無資料" in response.text:
+                print("網頁明確顯示：查無資料。")
+            else:
+                print("網頁結構可能已改變，或搜尋失敗。")
             return []
             
         rows = table.find_all("tr")[1:] # 跳過標題列
@@ -86,33 +95,24 @@ def fetch_tenders_by_scraping(keyword="清"):
             cols = row.find_all("td")
             if len(cols) < 5:
                 continue
-                
-            # 欄位解析 (這部分需要根據實際頁面結構調整)
-            # 0: 序號, 1: 機關名稱, 2: 標案案號/名稱, 3: 傳輸次數, 4: 招標方式, 5: 公告日期, 6: 截止投標, 7: 預算金額
             
             try:
+                # 0: 序號, 1: 機關名稱, 2: 案號/名稱, 3: 傳輸次數, 4: 招標方式, 5: 公告日期, 6: 截止投標, 7: 預算金額
                 org = cols[1].get_text(strip=True)
                 
-                # 標案名稱和案號通常在同一個單元格，案號在括號內或有換行
                 name_cell = cols[2]
                 name_text = name_cell.get_text(strip=True)
                 
-                # 試著拆分案號和名稱
-                # 案號通常在前面
                 job_no = ""
                 name = name_text
+                # 嘗試從括號提取案號
                 if "(" in name_text and ")" in name_text:
-                    job_no = name_text.split("(")[1].split(")")[0]
-                    name = name_text.split(")")[1].strip() if ")" in name_text else name_text
-                elif "\n" in name_cell.get_text():
-                    parts = [p.strip() for p in name_cell.get_text().split("\n") if p.strip()]
-                    if len(parts) >= 2:
-                        job_no = parts[0]
-                        name = parts[1]
+                    parts = name_text.split(")")
+                    job_no = parts[0].replace("(", "").strip()
+                    name = ")".join(parts[1:]).strip()
                 
-                # 公告日期 (民國年)
-                publish_raw = cols[5].get_text(strip=True) # 113/04/28
-                # 轉換為 YYYYMMDD
+                # 公告日期
+                publish_raw = cols[5].get_text(strip=True)
                 p_parts = publish_raw.split("/")
                 if len(p_parts) == 3:
                     publish = f"{int(p_parts[0])+1911}{p_parts[1]}{p_parts[2]}"
@@ -129,7 +129,7 @@ def fetch_tenders_by_scraping(keyword="清"):
                 except:
                     budget = 0
                 
-                # 詳情 URL
+                # URL
                 link_tag = name_cell.find("a")
                 tender_url = ""
                 if link_tag and link_tag.get("href"):
@@ -140,7 +140,7 @@ def fetch_tenders_by_scraping(keyword="清"):
                         tender_url = href
 
                 tenders.append({
-                    "job_no": job_no or name_text[:15], # 如果沒抓到案號，暫用前15字
+                    "job_no": job_no or name_text[:15],
                     "title": name,
                     "org": org,
                     "category": "勞務類",
@@ -150,7 +150,6 @@ def fetch_tenders_by_scraping(keyword="清"):
                     "url": tender_url
                 })
             except Exception as e:
-                print(f"解析列時發生錯誤: {e}")
                 continue
                 
         return tenders
@@ -167,14 +166,7 @@ def main():
     
     tenders = fetch_tenders_by_scraping(args.keyword)
     
-    if not tenders:
-        print("警告: 未抓取到任何資料")
-        # 如果爬蟲失敗，可以考慮回退到 API 
-        # 但這裡我們依照使用者要求，只實作爬蟲邏輯
-    
-    # 確保目錄存在
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(tenders, f, ensure_ascii=False, indent=2)
         
