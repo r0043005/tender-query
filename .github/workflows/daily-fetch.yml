@@ -1,18 +1,12 @@
-name: Fetch and Deploy Tenders
+name: Daily Tender Sync
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 每天凌晨執行
-  workflow_dispatch: # 允許手動執行
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
 
 jobs:
   fetch-and-deploy:
@@ -28,41 +22,33 @@ jobs:
         with:
           python-version: '3.11'
           
-      - name: Install dependencies
+      - name: Fetch and Process
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install requests beautifulsoup4 cloudscraper brotli
-          
-      - name: Fetch Tenders Data
-        run: |
-          python scripts/fetch_tenders.py --keyword "清" --output "data/tenders.json"
+          python3 -m pip install --upgrade pip
+          python3 -m pip install requests beautifulsoup4 cloudscraper brotli
+          python3 scripts/fetch_tenders.py --keyword "清" --output "data/tenders.json"
         
-      - name: Commit and push data
+      - name: Commit data changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/tenders.json
           if git diff --staged --quiet; then
-            echo "沒有新數據。"
+            echo "No changes to commit"
           else
-            git commit -m "Update data [skip ci]"
+            git commit -m "Update tender data [skip ci]"
             git push origin main
           fi
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Prepare Files
+      - name: Build Web Folder
         run: |
-          mkdir -p dist/data
-          cp index.html dist/
-          cp data/tenders.json dist/data/
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'dist'
+          mkdir -p public/data
+          cp index.html public/
+          cp data/tenders.json public/data/
 
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages # 發布到 gh-pages 分支
