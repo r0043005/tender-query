@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-政府電子採購網標案資料抓取腳本 (Session 強化版)
-使用 Session 處理 Cookie 並強化 HTML 解析
+政府電子採購網標案資料抓取腳本 (Cloudscraper 強化版)
+使用 cloudscraper 繞過 Cloudflare 防護
 """
 
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import json
 import os
@@ -15,27 +15,28 @@ import argparse
 def fetch_tenders_by_scraping(keyword="清"):
     print(f"開始爬取關鍵字: {keyword}")
     
-    # 使用 Session 保持 Cookies
-    session = requests.Session()
+    # 建立 cloudscraper 實例 (自動處理 Cloudflare 挑戰)
+    scraper = cloudscraper.create_scraper(
+        browser={
+            'browser': 'chrome',
+            'platform': 'windows',
+            'mobile': False
+        }
+    )
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://web.pcc.gov.tw/prkms/tender/common/basic/indexTenderBasic"
     }
     
     try:
-        # 第一步：先訪問首頁建立 Session
-        print("存取搜尋首頁建立 Session...")
-        index_url = "https://web.pcc.gov.tw/prkms/tender/common/basic/indexTenderBasic"
-        session.get(index_url, headers=headers, timeout=20)
-        
-        # 第二步：執行搜尋
         url = "https://web.pcc.gov.tw/prkms/tender/common/basic/readTenderBasic"
         
         today = datetime.now()
-        start_dt = today - timedelta(days=10) # 稍微放寬日期範圍增加命中率
+        start_dt = today - timedelta(days=7) # 跟隨使用者成功的參數範例 (約一週)
         
+        # 完整對齊使用者手動搜尋成功的參數
         params = {
             "pageSize": "50",
             "firstSearch": "true",
@@ -46,39 +47,37 @@ def fetch_tenders_by_scraping(keyword="清"):
             "tenderName": keyword,
             "tenderType": "TENDER_DECLARATION",
             "tenderWay": "TENDER_WAY_ALL_DECLARATION",
-            "dateType": "isSpdt",
+            "dateType": "isSpdt", # 等標期內
             "tenderStartDate": start_dt.strftime("%Y/%m/%d"),
             "tenderEndDate": today.strftime("%Y/%m/%d"),
-            "radProctrgCate": "RAD_PROCTRG_CATE_3",
+            "radProctrgCate": "RAD_PROCTRG_CATE_3", # 勞務類
+            "policyAdvocacy": ""
         }
         
-        print(f"發送搜尋請求到 {url}...")
-        headers["Referer"] = index_url
-        response = session.get(url, params=params, headers=headers, timeout=30)
+        print(f"發送搜尋請求 (Cloudscraper) 到 {url}...")
+        response = scraper.get(url, params=params, headers=headers, timeout=30)
         
         if response.status_code != 200:
             print(f"錯誤: 狀態碼 {response.status_code}")
+            # 輸出部分內容診斷
+            print(f"DEBUG Content: {response.text[:200]}")
             return []
             
-        # 偵錯：如果沒抓到資料，存下 HTML
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 標案列表解析邏輯
-        # 採購網結果表格可能在 class="table_list" 或特定 id 下
+        # 尋找結果表格 (readTenderBasic 的結構)
         table = soup.select_one("table.table_list")
         if not table:
             table = soup.find("table", {"summary": "結果列表"})
         
         if not table:
-            # 檢查是否有查無資料訊息
             if "查無資料" in response.text:
-                print("結果：查無符合條件的標案。")
+                print("結果：網頁顯示「查無資料」，請確認該日期區間是否有標案。")
             else:
-                print("警告：找不到表格結構。")
-                # 儲存 HTML 片段供開發者查閱
-                with open("error_page.html", "w", encoding="utf-8") as f:
-                    f.write(response.text[:5000])
-                print("已存檔前 5000 字元至 error_page.html")
+                print("警告：仍然找不到表格結構，可能需要手動確認 HTML 內容。")
+                print(f"Page Title: {soup.title.string if soup.title else 'No Title'}")
+                # 輸出 HTML 前 500 字元以便在 Actions 日誌中查看
+                print(f"HTML Snippet: {response.text[:500]}")
             return []
             
         rows = table.find_all("tr")
@@ -86,47 +85,38 @@ def fetch_tenders_by_scraping(keyword="清"):
         
         for row in rows:
             cols = row.find_all("td")
-            # 通常標案資料列會有超過 5 個 td
             if len(cols) < 7:
                 continue
             
             try:
-                # 索引位置可能因版本微調，我們進行更寬鬆的解析
-                # 嘗試找出包含 <a> 標籤且內容有關鍵字的列
-                name_cell = None
-                for td in cols:
-                    if td.find("a") and keyword in td.get_text():
-                        name_cell = td
-                        break
-                
-                if not name_cell:
-                    name_cell = cols[2] # 預設位置
-                
+                # 欄位：1:機關, 2:名稱(案號), 5:公告日, 6:截止日, 7:預算
                 org = cols[1].get_text(strip=True)
+                name_cell = cols[2]
                 name_text = name_cell.get_text(strip=True)
                 
+                # 案號處理
                 job_no = ""
                 name = name_text
                 if "(" in name_text and ")" in name_text:
-                    job_no = name_text.split("(")[1].split(")")[0]
-                    name = name_text.split(")")[1].strip() if ")" in name_text else name_text
+                    parts = name_text.split(")")
+                    job_no = parts[0].replace("(", "").strip()
+                    name = ")".join(parts[1:]).strip()
                 
-                # 找到日期欄位（通常是 YYYY/MM/DD 或 民國格式）
-                publish = ""
-                for td in cols:
-                    txt = td.get_text(strip=True)
-                    if "/" in txt and len(txt) >= 8:
-                        publish = txt.replace("/", "")
-                        break
+                # 公告日期
+                publish = cols[5].get_text(strip=True).replace("/", "")
+                
+                # 預算
+                budget_raw = cols[7].get_text(strip=True).replace(",", "")
+                budget = int(budget_raw) if budget_raw.isdigit() else 0
 
                 tenders.append({
                     "job_no": job_no or name_text[:15],
                     "title": name,
                     "org": org,
                     "category": "勞務類",
-                    "budget": 0, # 此頁面預算有時在詳細頁，先給 0
+                    "budget": budget,
                     "publish": publish,
-                    "deadline": "",
+                    "deadline": cols[6].get_text(strip=True),
                     "url": "https://web.pcc.gov.tw" + name_cell.find("a")["href"] if name_cell.find("a") else ""
                 })
             except Exception:
